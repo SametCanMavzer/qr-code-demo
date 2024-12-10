@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Kod Oluştur & Oku</title>
+    <!-- QR Kod okuyucu kütüphanesi -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #007bff;
+            margin-bottom: 10px;
+        }       
+        .header h1:hover {
+            transform: scale(1.02);
+            transition: transform 0.3s ease;
+}
+        .section {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #qr-reader {
+            width: 100%;
+        }
+        #qrResult {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        img {
+            max-width: 200px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        #fixedQR {
+            text-align: center;
+        }
+        #fixedQR img {
+            margin: 10px auto;
+            display: block;
+        }
+        #fixedQR p {
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Code Generator and Reader for ISO ❤️</h1>
+        </div>
+        <!-- QR Kod Oluşturma Bölümü -->
+        <div class="section">
+            <h2>QR Kod Oluştur</h2>
+            <div>
+                <input type="text" id="urlInput" 
+                       placeholder="Yönlendirilecek URL (örn: https://www.google.com)">
+                <button onclick="generateQR()">QR Kod Oluştur</button>
+            </div>
+            <div id="qrOutput"></div>
+        </div>
+
+        <!-- QR Kod Okuma Bölümü -->
+        <div class="section">
+            <h2>QR Kod Okut</h2>
+            <div id="qr-reader"></div>
+            <div id="qrResult"></div>
+        </div>
+
+        <!-- Sabit URL Bölümü -->
+        <div class="section">
+            <h2>Sabit QR Kod</h2>
+            <p>Bu QR kod sizi Google'a yönlendirecek:</p>
+            <div id="fixedQR"></div>
+        </div>
+    </div>
+
+    <script>
+        // QR Kod Oluşturma
+        async function generateQR() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                alert('Lütfen bir URL girin');
+                return;
+            }
+
+            try {
+                const response = await fetch('/generate-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                const qrOutput = document.getElementById('qrOutput');
+                qrOutput.innerHTML = `
+                    <h3>Oluşturulan QR Kod:</h3>
+                    <img src="${data.qr}" alt="QR Code">
+                    <p class="success">QR kod başarıyla oluşturuldu!</p>
+                `;
+            } catch (error) {
+                alert('QR kod oluşturulurken bir hata oluştu');
+                console.error('Error:', error);
+            }
+        }
+
+        // QR Kod Okuma Başarılı
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('qrResult').innerHTML = `
+                <h3>QR Kod Okundu!</h3>
+                <p>Bulunan URL: ${decodedText}</p>
+                <button onclick="window.location.href='${decodedText}'">
+                    URL'ye Git
+                </button>
+            `;
+        }
+
+        // QR Kod Okuma Başarısız
+        function onScanFailure(error) {
+            console.warn(`QR Code tarama hatası: ${error}`);
+            document.getElementById('qrResult').innerHTML = `
+                <p style="color: orange;">QR kod taranamadı. Lütfen kodu düzgün gösterdiğinizden emin olun.</p>
+            `;
+        }
+
+        // QR Kod okuyucuyu başlat
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "qr-reader",
+            { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                aspectRatio: 1.0
+            }
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        // Sayfa yüklendiğinde sabit QR kodu oluştur
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/generate-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: 'https://www.google.com' }) // Sabit URL
+                });
+                
+                const data = await response.json();
+                document.getElementById('fixedQR').innerHTML = `
+                    <img src="${data.qr}" alt="Fixed QR Code">
+                    <p>https://www.google.com</p>
+                `;
+            } catch (error) {
+                console.error('Sabit QR kod oluşturma hatası:', error);
+            }
+        });
+    </script>
+</body>
+</html>
