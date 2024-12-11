@@ -1,10 +1,16 @@
-const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const qrcode = require('qrcode');
 const os = require('os'); // Network interface'lerini almak için
 
 
+// SSL sertifikalarını yükle
+const options = {
+    key: fs.readFileSync('key.pem'),    // Geliştirme ortamı için oluşturduğumuz anahtar
+    cert: fs.readFileSync('cert.pem'),   // Geliştirme ortamı için oluşturduğumuz sertifika
+    rejectUnauthorized: false
+};
 
 // IP adresini otomatik al
 // WiFi IP'sini bulan fonksiyon çook sert
@@ -45,7 +51,7 @@ function getWiFiIP() {
 }
 
 
-const server = http.createServer((req, res) => {
+const server = https.createServer(options, (req, res) => {
     // CORS headers 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
@@ -103,7 +109,8 @@ const localIP = getWiFiIP();
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n=== QR Kod Uygulaması ===');
-    console.log(`Yerel: http://localhost:${PORT}`);
-    console.log(`Ağ: http://${localIP}:${PORT}`);
+    console.log(`Yerel: https://localhost:${PORT}`);      // http -> https
+    console.log(`Ağ: https://${localIP}:${PORT}`);       // http -> https
+    console.log('⚠️  Test SSL sertifikası kullanılıyor!');
     console.log('========================\n');
 });
